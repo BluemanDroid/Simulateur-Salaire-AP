@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulateur Salaire</title>
+
+<link rel="manifest" href="manifest.json">
+
+<style>
+#splash-screen {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  color: white;
+  text-align: center;
+  animation: fadeOut 3s ease 5s forwards;
+}
+
+.splash-content h1 {
+  font-size: 28px;
+  margin-bottom: 10px;
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+:root {
+  --bg: #f2f4f8;
+  --card: rgba(255,255,255,0.9);
+  --text: #111;
+  --accent: #2563eb;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f172a;
+    --card: rgba(30,41,59,0.95);
+    --text: #f1f5f9;
+    --accent: #3b82f6;
+  }
+}
+
+body {
+  margin:0;
+  font-family: "Segoe UI", sans-serif;
+  background: var(--bg);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+}
+
+.card {
+  background: var(--card);
+  backdrop-filter: blur(20px);
+  padding:25px;
+  border-radius:20px;
+  width:95%;
+  max-width:500px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+h1 {
+  text-align:center;
+}
+
+input, select, button {
+  width:100%;
+  padding:12px;
+  margin:6px 0;
+  border-radius:12px;
+  border:1px solid #ccc;
+  font-size:16px;
+}
+
+button {
+  background: var(--accent);
+  color:white;
+  border:none;
+  cursor:pointer;
+  font-weight:bold;
+}
+
+.result {
+  text-align:center;
+  font-size:30px;
+  font-weight:bold;
+  margin-top:20px;
+  transition: transform 0.2s;
+}
+
+.warning {
+  color:red;
+  font-weight:bold;
+  text-align:center;
+  margin-top:15px;
+  font-size:14px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="splash-screen">
+  <div class="splash-content">
+    <h1>Simulateur Salaire</h1>
+    <p>Version 1.0</p>
+    <p>Créé et édité par <span style="color:blue;">Blueman</span></p>
+  </div>
+</div>
+
+<div class="card">
+<h1>Simulateur Salaire</h1>
+
+<select id="grade"></select>
+<select id="echelon"></select>
+
+<input type="number" id="pas" placeholder="Taux prélèvement (%)" value="0">
+<input type="number" id="hs" placeholder="Heures supplémentaires">
+<input type="number" id="nuitS" placeholder="Nuits simples">
+<input type="number" id="nuitM" placeholder="Nuits majorées">
+<input type="number" id="dimanche" placeholder="Dimanches / Fériés">
+
+<button onclick="calculer()">Calculer</button>
+
+<div class="result" id="result">💶 0 €</div>
+
+<div class="warning">
+⚠️ Attention, cette simulation ne prend pas en compte le supplément familial
+et le montant de la mutuelle. ⚠️
+</div>
+</div>
+
+<script>
+
+// =========================
+// GRILLES
+// =========================
+
+const GRILLE = {
+"Surveillant / Brigadier": {
+1:{brut:1846.04,hs:15.21},2:{brut:1855.89,hs:15.30},
+3:{brut:1875.58,hs:15.46},4:{brut:1905.12,hs:15.70},
+5:{brut:1974.03,hs:16.27},6:{brut:2042.95,hs:16.84},
+7:{brut:2087.26,hs:17.20},8:{brut:2161.10,hs:17.81},
+9:{brut:2254.63,hs:18.58},10:{brut:2338.32,hs:19.27},
+11:{brut:2426.93,hs:20.00},12:{brut:2515.54,hs:20.73},
+13:{brut:2618.92,hs:21.58}
+},
+"Brigadier-chef": {
+1:{brut:2166.02,hs:17.85},2:{brut:2249.71,hs:18.54},
+3:{brut:2353.09,hs:19.39},4:{brut:2417.08,hs:19.92},
+5:{brut:2515.54,hs:20.73},6:{brut:2618.92,hs:21.58},
+7:{brut:2677.99,hs:22.07}
+},
+"Major": {
+1:{brut:2372.78,hs:19.56},2:{brut:2456.47,hs:20.25},
+3:{brut:2545.08,hs:20.98},4:{brut:2638.61,hs:21.75},
+5:{brut:2702.61,hs:22.27},6:{brut:2791.22,hs:23.00},
+7:{brut:2850.29,hs:23.49},8:{brut:2929.05,hs:24.14}
+}
+};
+
+// =========================
+// CONSTANTES
+// =========================
+
+const TAUX_PSS=0.285;
+const ICP=319.58;
+const IND_CSG=55;
+const IND_NUIT_SIMPLE=20;
+const IND_NUIT_MAJOREE=24;
+const IND_DIMANCHE=49.86;
+
+const TAUX_PENSION=0.111;
+const TAUX_PENSION_PSS=0.21;
+const TAUX_CSG_DED=0.068;
+const TAUX_CSG_NON_DED=0.024;
+const TAUX_CRDS=0.005;
+const TAUX_BASE_CSG=0.9825;
+const TAUX_REDUCTION_HS=0.05;
+const TAUX_HS_EXO=0.0668;
+
+// =========================
+// INITIALISATION
+// =========================
+
+const gradeSelect=document.getElementById("grade");
+const echelonSelect=document.getElementById("echelon");
+
+Object.keys(GRILLE).forEach(g=>{
+let opt=document.createElement("option");
+opt.text=g; gradeSelect.add(opt);
+});
+
+gradeSelect.onchange=updateEchelons;
+updateEchelons();
+
+function updateEchelons(){
+echelonSelect.innerHTML="";
+let echelons=Object.keys(GRILLE[gradeSelect.value]);
+echelons.forEach(e=>{
+let opt=document.createElement("option");
+opt.text=e; echelonSelect.add(opt);
+});
+}
+
+// =========================
+// CALCUL
+// =========================
+
+function calculer(){
+
+let grade=gradeSelect.value;
+let echelon=parseInt(echelonSelect.value);
+let taux_pas=parseFloat(document.getElementById("pas").value||0);
+
+let hs=parseFloat(document.getElementById("hs").value||0);
+let nuitS=parseFloat(document.getElementById("nuitS").value||0);
+let nuitM=parseFloat(document.getElementById("nuitM").value||0);
+let dim=parseFloat(document.getElementById("dimanche").value||0);
+
+let brut_indiciaire=GRILLE[grade][echelon].brut;
+let taux_hs=GRILLE[grade][echelon].hs;
+
+let pss=brut_indiciaire*TAUX_PSS;
+let base_brute=brut_indiciaire+pss+ICP+IND_CSG;
+
+let hs_brut=hs*taux_hs;
+let brut_total=base_brute+hs_brut+(nuitS*IND_NUIT_SIMPLE)+(nuitM*IND_NUIT_MAJOREE)+(dim*IND_DIMANCHE);
+
+let pension=brut_indiciaire*TAUX_PENSION;
+let pension_pss=pss*TAUX_PENSION_PSS;
+
+let base_csg=brut_total*TAUX_BASE_CSG;
+
+let csg_ded=base_csg*TAUX_CSG_DED;
+let csg_non_ded=base_csg*TAUX_CSG_NON_DED;
+let crds=base_csg*TAUX_CRDS;
+
+let rafp=Math.min((base_brute-brut_indiciaire)*0.05, brut_indiciaire*0.01);
+
+let reduction_hs=hs_brut*TAUX_REDUCTION_HS;
+
+let net_avant=brut_total-(pension+pension_pss+csg_ded+csg_non_ded+crds+rafp-reduction_hs);
+
+let hs_exo_net=hs_brut*(1-TAUX_HS_EXO);
+let net_imposable=net_avant+csg_non_ded+crds-hs_exo_net;
+let impot=net_imposable*(taux_pas/100);
+
+let net_final=Math.round((net_avant-impot)*100)/100;
+
+animerCompteur(net_final);
+}
+
+// =========================
+// ANIMATION
+// =========================
+
+function animerCompteur(valeur){
+
+let result=document.getElementById("result");
+let start=0;
+let duration=1000;
+let steps=50;
+let increment=valeur/steps;
+let interval=duration/steps;
+
+let compteur=setInterval(()=>{
+start+=increment;
+if(start>=valeur){
+clearInterval(compteur);
+result.innerText="💶 "+valeur+" €";
+result.style.transform="scale(1.2)";
+setTimeout(()=>{result.style.transform="scale(1)";},200);
+}else{
+result.innerText="💶 "+start.toFixed(2)+" €";
+}
+},interval);
+
+}
+
+</script>
+
+</body>
+</html>
