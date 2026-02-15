@@ -289,52 +289,73 @@ result.innerText="💶 "+start.toFixed(2)+" €";
    INSTALL MULTI-NAVIGATEURS
 ========================= */
 
+
 let deferredPrompt;
-const installBtn=document.getElementById("installBtn");
+const installBtn = document.getElementById("installBtn");
 
-function detectBrowser(){
-const ua=navigator.userAgent.toLowerCase();
-if(ua.includes("android")&&ua.includes("chrome"))return"chrome";
-if(ua.includes("android")&&ua.includes("firefox"))return"firefox";
-if(ua.includes("android")&&ua.includes("samsung"))return"samsung";
-if(ua.includes("android")&&ua.includes("opr"))return"opera";
-if(ua.includes("iphone")||ua.includes("ipad"))return"ios";
-return"other";
+function detectBrowser() {
+  const ua = navigator.userAgent;
+
+  const isAndroid = /Android/i.test(ua);
+  const isIOS = /iPhone|iPad|iPod/i.test(ua);
+
+  const isFirefox = /Firefox/i.test(ua);
+  const isSamsung = /SamsungBrowser/i.test(ua);
+  const isOpera = /OPR|Opera/i.test(ua);
+  const isChrome = /Chrome/i.test(ua) && !isSamsung && !isOpera && !isFirefox;
+
+  if (isIOS) return "ios";
+  if (isAndroid && isChrome) return "chrome";
+  if (isAndroid && isFirefox) return "firefox";
+  if (isAndroid && isSamsung) return "samsung";
+  if (isAndroid && isOpera) return "opera";
+
+  return "other";
 }
 
-window.addEventListener("beforeinstallprompt",(e)=>{
-e.preventDefault();
-deferredPrompt=e;
-installBtn.style.display="block";
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  installBtn.style.display = "block";
 });
 
-installBtn.addEventListener("click",async()=>{
-const browser=detectBrowser();
+installBtn.addEventListener("click", async () => {
 
-if(deferredPrompt){
-deferredPrompt.prompt();
-await deferredPrompt.userChoice;
-deferredPrompt=null;
-installBtn.style.display="none";
-return;
-}
+  const browser = detectBrowser();
 
-if(browser==="firefox"){
-alert("📱 Firefox Android :\nMenu ⋮ → Installer");
-}
-else if(browser==="samsung"){
-alert("📱 Samsung Internet :\nMenu ☰ → Ajouter à l'écran d'accueil");
-}
-else if(browser==="opera"){
-alert("📱 Opera Android :\nMenu → Ajouter à l'écran d'accueil");
-}
-else if(browser==="ios"){
-alert("📱 iPhone :\nOuvre dans Safari → Partager → Ajouter à l'écran d'accueil");
-}
-else{
-alert("Menu du navigateur → Ajouter à l'écran d'accueil");
-}
+  // Chrome Android
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    installBtn.style.display = "none";
+    return;
+  }
+
+  // Fallback instructions
+  switch (browser) {
+    case "firefox":
+      alert("📱 Firefox Android :\n\nMenu ⋮ → Installer\nou Ajouter à l'écran d'accueil");
+      break;
+
+    case "samsung":
+      alert("📱 Samsung Internet :\n\nMenu ☰ → Ajouter à la page d'accueil");
+      break;
+
+    case "opera":
+      alert("📱 Opera Android :\n\nMenu → Ajouter à l'écran d'accueil");
+      break;
+
+    case "ios":
+      alert("📱 iPhone / iPad :\n\n1️⃣ Ouvre dans Safari\n2️⃣ Bouton Partager\n3️⃣ Ajouter à l'écran d'accueil");
+      break;
+
+    default:
+      alert("Menu du navigateur → Ajouter à l'écran d'accueil");
+  }
+
 });
+
 
 </script>
 
