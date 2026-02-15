@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Simulateur Salaire</title>
-
 <link rel="manifest" href="manifest.json">
 
 <style>
@@ -143,7 +142,7 @@ et le montant de la mutuelle. ⚠️
 <script>
 
 /* =========================
-   GRILLES
+   GRILLES COMPLETES
 ========================= */
 
 const GRILLE={
@@ -287,25 +286,53 @@ result.innerText="💶 "+start.toFixed(2)+" €";
 }
 
 /* =========================
-   INSTALL BUTTON
+   INSTALL MULTI-NAVIGATEURS
 ========================= */
 
 let deferredPrompt;
+const installBtn=document.getElementById("installBtn");
 
-window.addEventListener('beforeinstallprompt', (e)=>{
+function detectBrowser(){
+const ua=navigator.userAgent.toLowerCase();
+if(ua.includes("android")&&ua.includes("chrome"))return"chrome";
+if(ua.includes("android")&&ua.includes("firefox"))return"firefox";
+if(ua.includes("android")&&ua.includes("samsung"))return"samsung";
+if(ua.includes("android")&&ua.includes("opr"))return"opera";
+if(ua.includes("iphone")||ua.includes("ipad"))return"ios";
+return"other";
+}
+
+window.addEventListener("beforeinstallprompt",(e)=>{
 e.preventDefault();
 deferredPrompt=e;
-document.getElementById("installBtn").style.display="block";
+installBtn.style.display="block";
 });
 
-document.getElementById("installBtn").addEventListener("click",async()=>{
+installBtn.addEventListener("click",async()=>{
+const browser=detectBrowser();
+
 if(deferredPrompt){
 deferredPrompt.prompt();
 await deferredPrompt.userChoice;
 deferredPrompt=null;
-document.getElementById("installBtn").style.display="none";
-}else{
-alert("Sur iPhone :\n1️⃣ Ouvre dans Safari\n2️⃣ Clique sur Partager\n3️⃣ Ajouter à l'écran d'accueil");
+installBtn.style.display="none";
+return;
+}
+
+if(browser==="firefox"){
+alert("📱 Firefox Android :\nMenu ⋮ → Installer");
+}
+else if(browser==="samsung"){
+alert("📱 Samsung Internet :\nMenu ☰ → Ajouter à l'écran d'accueil");
+}
+else if(browser==="opera"){
+alert("📱 Opera Android :\nMenu → Ajouter à l'écran d'accueil");
+}
+else if(browser==="ios"){
+alert("📱 iPhone :\nOuvre dans Safari → Partager → Ajouter à l'écran d'accueil");
+}
+else{
+alert("Menu du navigateur → Ajouter à l'écran d'accueil");
 }
 });
 
